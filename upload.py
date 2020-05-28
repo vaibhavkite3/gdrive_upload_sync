@@ -5,8 +5,9 @@ from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 
 #other libraries
-import commands
+import subprocess
 import datetime
+import socket
 import time
 from os import chdir, listdir, stat, path
 import sys
@@ -19,32 +20,31 @@ gauth.LocalWebserverAuth()
 drive = GoogleDrive(gauth)
 
 #Source folder name where backup files are kept
-source_path_file="backup_path.txt"
-src_folder_name=commands.getoutput("cat "+source_path_file+"")
-target_upload_dir=commands.getoutput("basename "+src_folder_name+"")
+source_path_file="./backup_path.txt"
+file_path = open(source_path_file, 'r').readline()
 
-#project name
-project_name="MKCL"
+src_folder_name=subprocess.getoutput("cat "+source_path_file+"")
+target_upload_dir=subprocess.getoutput("basename "+src_folder_name+"")
+
+
 #server name
-server_name = commands.getoutput("/bin/hostname")
-#server ip address
-server_ip = commands.getoutput("/sbin/ifconfig | grep \"inet addr\" | grep -v \"127.0.0.1\" | awk '{print $2}' | cut -d: -f2 | head -n 1")
-#server hostname and ip
-server_identity = server_name + "_" + server_ip
+server_identity = socket.gethostname()
 #year and month
 now = datetime.datetime.now()
 c_year = now.strftime("%Y")
 c_month = now.strftime("%B")
+c_date = now.strftime("%d-%m-%Y")
 
 
   
 #file list
 def ListFolder(parent):
-  filelist=[]
+  file_list=[]
   file_list = drive.ListFile({'q': "'%s' in parents and trashed=false" % parent}).GetList()
   #print file_list
   for files in file_list:
     print('title: %s, id: %s' % (files['title'], files['id']))
+
 
 #get folder ID
 def getFolderID(req_parent_folder,req_folder):
@@ -89,18 +89,18 @@ def CreateFolderStructure(parent_folder,folder_name):
 
 	  
 #Folder Structure
-#PROJECT_NAME -- > SERVER_NAME_IP --> YEAR --> MONTH --> FILES
+#SERVER_NAME_IP --> YEAR --> MONTH --> FILES
 #Creating complete folder structure
 time.sleep(1)	  
-CreateFolderStructure('root',project_name)
+CreateFolderStructure('root',server_identity)
 time.sleep(1)
-CreateFolderStructure(getFolderID('root',project_name),server_identity)
+CreateFolderStructure(getFolderID('root',server_identity),c_year)
 time.sleep(1)
-CreateFolderStructure(getFolderID(getFolderID('root',project_name),server_identity),c_year)
+CreateFolderStructure(getFolderID(getFolderID('root',server_identity),c_year),c_month)
 time.sleep(1)
-CreateFolderStructure(getFolderID(getFolderID(getFolderID('root',project_name),server_identity),c_year),c_month)
+CreateFolderStructure(getFolderID(getFolderID(getFolderID('root',server_identity),c_year),c_month),c_date)
 time.sleep(1)
-CreateFolderStructure(getFolderID(getFolderID(getFolderID(getFolderID('root',project_name),server_identity),c_year),c_month),target_upload_dir)
+CreateFolderStructure(getFolderID(getFolderID(getFolderID(getFolderID('root',server_identity),c_year),c_month),c_date),target_upload_dir)
 time.sleep(1)
 
 
@@ -120,7 +120,7 @@ for files in listdir(src_folder_name):
     if statinfo.st_size > 0:
       print('uploading ' + files)
       #Upload files to Drive in created path/folder	
-      f = drive.CreateFile({ "title" : files, "parents" : [{"id": getFolderID(getFolderID(getFolderID(getFolderID(getFolderID('root',project_name),server_identity),c_year),c_month),target_upload_dir)}]})	
+      f = drive.CreateFile({ "title" : files, "parents" : [{"id": getFolderID(getFolderID(getFolderID(getFolderID(getFolderID('root',server_identity),c_year),c_month),c_date),target_upload_dir)}]})	
       f.SetContentFile(src_folder_name+files)
       f.Upload()
 	  
