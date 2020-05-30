@@ -9,6 +9,7 @@ import subprocess
 import datetime
 import socket
 import time
+import os
 from os import chdir, listdir, stat, path
 import sys
 
@@ -21,10 +22,33 @@ drive = GoogleDrive(gauth)
 
 #Source folder name where backup files are kept
 source_path_file="./backup_path.txt"
-file_path = open(source_path_file, 'r').readline()
+file_data = ""
+src_folder_name = ""
+target_upload_dir = ""
+src_file_name = ""
 
-src_folder_name=subprocess.getoutput("cat "+source_path_file+"")
-target_upload_dir=subprocess.getoutput("basename "+src_folder_name+"")
+# Check the file
+if path.exists(source_path_file) == True:
+  file_data = open(source_path_file, 'r').readline().replace("\n", "")
+  if file_data == "":
+    print('Source file is Empty OR Incorrect')
+    sys.exit(1)
+
+#Print error if source file doesn't exist or empty
+else:
+  print('Source file is missing OR Incorrect')
+  sys.exit(1)
+
+
+if os.path.isdir(file_data) == True :
+    src_folder_name = os.path.dirname(file_data)
+    target_upload_dir = os.path.dirname(file_data).split('/')[-1]
+    print("We found source folder : " + src_folder_name + " & its Name : " + target_upload_dir + " of which all files will be uploaded")
+else:
+    src_folder_name = os.path.dirname(file_data)
+    src_file_name = os.path.basename(file_data)
+    target_upload_dir = os.path.dirname(file_data).split('/')[-1]
+    print("We found a file to upload : " + src_file_name + " from folder : " + target_upload_dir + " with path : " +src_folder_name)
 
 
 #server name
@@ -89,7 +113,7 @@ def CreateFolderStructure(parent_folder,folder_name):
 
 	  
 #Folder Structure
-#SERVER_NAME_IP --> YEAR --> MONTH --> FILES
+#SERVER_NAME_IP --> YEAR --> MONTH --> DATE --> FILES
 #Creating complete folder structure
 time.sleep(1)	  
 CreateFolderStructure('root',server_identity)
@@ -103,6 +127,7 @@ time.sleep(1)
 CreateFolderStructure(getFolderID(getFolderID(getFolderID(getFolderID('root',server_identity),c_year),c_month),c_date),target_upload_dir)
 time.sleep(1)
 
+print("Created a folder structure on GOOGLE DRIVE as : " + server_identity + "/" + c_year + "/" + c_month + "/" + c_date + "/" + target_upload_dir)
 
 # Enter the source folder
 try:
@@ -113,17 +138,31 @@ except OSError:
   # Auto-iterate through all files in the folder.
   sys.exit(1)
   
-for files in listdir(src_folder_name):
+if os.path.isdir(file_data) == True:
+  #upload all files in a dir
+  for files in listdir(src_folder_name):
 
-  if path.isfile(files):
-    statinfo = stat(files)
-    if statinfo.st_size > 0:
-      print('uploading ' + files)
-      #Upload files to Drive in created path/folder	
-      f = drive.CreateFile({ "title" : files, "parents" : [{"id": getFolderID(getFolderID(getFolderID(getFolderID(getFolderID('root',server_identity),c_year),c_month),c_date),target_upload_dir)}]})	
-      f.SetContentFile(src_folder_name+files)
-      f.Upload()
-	  
-      #skip the file if it's empty
-    else:
-      print('file {0} is empty'.format(files))
+    if path.isfile(files):
+      statinfo = stat(files)
+      if statinfo.st_size > 0:
+        print('uploading ' + files)
+        #Upload files to Drive in created path/folder	
+        f = drive.CreateFile({ "title" : files, "parents" : [{"id": getFolderID(getFolderID(getFolderID(getFolderID(getFolderID('root',server_identity),c_year),c_month),c_date),target_upload_dir)}]})	
+        f.SetContentFile(src_folder_name + "/" + files)
+        f.Upload()
+        print("Uploading done for " +files)
+        #skip the file if it's empty
+      else:
+        print('file {0} is empty'.format(files))
+else:
+  #upload a single file
+  if stat(src_file_name).st_size > 0:
+    print('uploading ' + src_file_name)
+    #Upload files to Drive in created path/folder	
+    f = drive.CreateFile({ "title" : src_file_name, "parents" : [{"id": getFolderID(getFolderID(getFolderID(getFolderID(getFolderID('root',server_identity),c_year),c_month),c_date),target_upload_dir)}]})	
+    f.SetContentFile(src_folder_name + "/" + src_file_name)
+    f.Upload()
+    print("Uploading done for " + src_file_name)
+    #skip the file if it's empty
+  else:
+    print('file {0} is empty'.format(src_file_name))
