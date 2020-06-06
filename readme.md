@@ -25,9 +25,9 @@ For Ubuntu 16 , you will need Python 3.6
 
 ```sh
 $ sudo pip3 install pydrive
-$ sudo sudo add-apt-repository ppa:deadsnakes/ppa
-$ sudo sudo apt-get update
-$ sudo sudo apt-get install python3.6
+$ sudo add-apt-repository ppa:deadsnakes/ppa
+$ sudo apt-get update
+$ sudo apt-get install python3.6
 $ sudo curl https://bootstrap.pypa.io/get-pip.py | sudo python3.6
 $ sudo pip3.6 install --upgrade google-auth-oauthlib
 $ sudo pip install httplib2==0.15.0
